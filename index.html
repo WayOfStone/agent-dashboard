@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agent Control Center</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0a0f;
+      color: #e0e0e0;
+      font-family: 'JetBrains Mono', 'Courier New', monospace;
+      min-height: 100vh;
+    }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: #0a0a0f; }
+    ::-webkit-scrollbar-thumb { background: #00ff88; border-radius: 2px; }
+
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.85)} }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes glitch {
+      0%,100%{text-shadow:2px 0 #00ff88,-2px 0 #ff0066}
+      25%{text-shadow:-2px 0 #00ff88,2px 0 #ff0066}
+      50%{text-shadow:2px 0 #00d4ff,-2px 0 #ff0066}
+    }
+    @keyframes topbar { 0%,100%{opacity:.6} 50%{opacity:1} }
+
+    .grid-bg {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background-image:
+        linear-gradient(rgba(0,255,136,.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,255,136,.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+
+    header {
+      position: sticky; top: 0; z-index: 100;
+      border-bottom: 1px solid #1a1a2e;
+      padding: 14px 32px;
+      display: flex; align-items: center; justify-content: space-between;
+      background: rgba(0,0,0,.6);
+      backdrop-filter: blur(12px);
+    }
+    .logo { display: flex; align-items: center; gap: 12px; }
+    .logo-icon {
+      width: 34px; height: 34px; border-radius: 7px;
+      background: linear-gradient(135deg,#00ff8822,#00d4ff22);
+      border: 1px solid #00ff8855;
+      display: flex; align-items: center; justify-content: center; font-size: 18px;
+    }
+    .logo-title {
+      font-size: 13px; font-weight: 700; color: #00ff88;
+      letter-spacing: 2px; animation: glitch 8s infinite;
+    }
+    .logo-sub { font-size: 10px; color: #333; letter-spacing: 1px; margin-top: 1px; }
+
+    .header-stats { display: flex; gap: 24px; align-items: center; }
+    .stat-badge { text-align: center; }
+    .stat-badge .val { font-size: 16px; font-weight: 700; }
+    .stat-badge .lbl { font-size: 9px; color: #333; letter-spacing: 1px; }
+    .divider { width: 1px; height: 24px; background: #1a1a2e; }
+
+    .clock { text-align: right; }
+    .clock .time { font-size: 18px; font-weight: 700; color: #00ff88; letter-spacing: 2px; }
+    .clock .date { font-size: 10px; color: #333; margin-top: 1px; }
+
+    main { padding: 24px 32px; position: relative; z-index: 1; }
+
+    .filters { display: flex; gap: 8px; margin-bottom: 24px; align-items: center; }
+    .filter-label { font-size: 11px; color: #333; letter-spacing: 1px; margin-right: 4px; }
+    .filter-btn {
+      background: transparent; border: 1px solid #1a1a2e;
+      color: #444; padding: 4px 14px; border-radius: 4px;
+      cursor: pointer; font-size: 11px; font-family: inherit;
+      letter-spacing: 1px; transition: all .15s;
+    }
+    .filter-btn.active { background: rgba(0,255,136,.15); border-color: #00ff88; color: #00ff88; }
+    .filter-count { margin-left: auto; font-size: 11px; color: #333; }
+
+    .agent-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 16px;
+    }
+
+    .agent-card {
+      background: rgba(255,255,255,.03);
+      border: 1px solid #1a1a2e;
+      border-radius: 8px; padding: 20px;
+      cursor: pointer; transition: all .2s;
+      position: relative; overflow: hidden;
+      animation: fadeIn .4s ease;
+    }
+    .agent-card:hover { background: rgba(255,255,255,.06); }
+    .agent-card.running { border-color: var(--agent-color); }
+
+    .card-topbar {
+      position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      animation: topbar 2s infinite;
+    }
+
+    .card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+    .agent-avatar {
+      width: 96px; height: 96px; border-radius: 16px;
+      display: flex; align-items: center; justify-content: center; font-size: 44px;
+      flex-shrink: 0; position: relative; cursor: pointer; overflow: hidden;
+    }
+    .agent-avatar img {
+      width: 100%; height: 100%; object-fit: cover; border-radius: 12px;
+    }
+    .agent-avatar .upload-hint {
+      position: absolute; inset: 0; background: rgba(0,0,0,.6);
+      display: none; align-items: center; justify-content: center;
+      font-size: 10px; color: #fff; letter-spacing: 1px; border-radius: 12px;
+      text-align: center; line-height: 1.4;
+    }
+    .agent-avatar:hover .upload-hint { display: flex; }
+    .avatar-input { display: none; }
+    .agent-name { font-size: 16px; font-weight: 700; color: #fff; }
+    .status-badge {
+      font-size: 10px; font-weight: 600; letter-spacing: 1px;
+      padding: 2px 7px; border-radius: 3px;
+      display: inline-flex; align-items: center; gap: 4px;
+    }
+    .status-dot {
+      width: 5px; height: 5px; border-radius: 50%; display: inline-block;
+    }
+    .status-dot.running { animation: pulse 1.2s infinite; }
+    .agent-desc { font-size: 11px; color: #555; margin-top: 2px; }
+
+    .task-box {
+      background: rgba(0,0,0,.3); border-radius: 5px;
+      padding: 8px 12px; margin-bottom: 12px;
+      border-left: 2px solid #333; min-height: 36px;
+      font-size: 12px;
+    }
+    .task-box.running { border-left-color: var(--agent-color); }
+    .task-text { color: #ccc; }
+    .task-empty { color: #333; }
+    .task-runtime { color: #555; margin-left: 8px; }
+    .task-arrow { margin-right: 6px; }
+
+    .card-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .mini-stat {
+      text-align: center; background: rgba(0,0,0,.2);
+      border-radius: 4px; padding: 6px 4px;
+    }
+    .mini-stat .lbl { font-size: 9px; color: #444; letter-spacing: 1px; margin-bottom: 2px; }
+    .mini-stat .val { font-size: 12px; font-weight: 600; }
+
+    .card-footer {
+      margin-top: 10px; display: flex; justify-content: space-between;
+      font-size: 10px; color: #444;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 200;
+      background: rgba(0,0,0,.8); backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .modal {
+      background: #0d0d1a; border-radius: 12px;
+      padding: 32px; width: 480px; max-width: 90vw;
+      animation: fadeIn .2s ease;
+    }
+    .modal-header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+    .modal-avatar {
+      width: 64px; height: 64px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center; font-size: 32px;
+    }
+    .modal-name { font-size: 22px; font-weight: 700; color: #fff; }
+    .modal-desc { font-size: 12px; margin-top: 2px; }
+    .modal-close {
+      margin-left: auto; background: transparent;
+      border: 1px solid #333; color: #555;
+      width: 28px; height: 28px; border-radius: 4px;
+      cursor: pointer; font-size: 14px; font-family: inherit;
+    }
+    .modal-row {
+      display: flex; justify-content: space-between;
+      padding: 8px 0; border-bottom: 1px solid #111; font-size: 12px;
+    }
+    .modal-row .key { color: #444; letter-spacing: 1px; }
+    .modal-row .val { color: #ccc; max-width: 280px; text-align: right; }
+  </style>
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">⚡</div>
+    <div>
+      <div class="logo-title">AGENT CONTROL CENTER</div>
+      <div class="logo-sub">OPENCLAW · NEO</div>
+    </div>
+  </div>
+  <div class="header-stats">
+    <div class="stat-badge"><div class="val" style="color:#00ff88" id="s-running">1</div><div class="lbl">RUNNING</div></div>
+    <div class="stat-badge"><div class="val" style="color:#555" id="s-idle">4</div><div class="lbl">IDLE</div></div>
+    <div class="stat-badge"><div class="val" style="color:#ff6b6b" id="s-error">1</div><div class="lbl">ERROR</div></div>
+    <div class="divider"></div>
+    <div class="stat-badge"><div class="val" style="color:#00d4ff">23</div><div class="lbl">TASKS TODAY</div></div>
+    <div class="stat-badge"><div class="val" style="color:#ffd700">99.2%</div><div class="lbl">UPTIME</div></div>
+  </div>
+  <div class="clock">
+    <div class="time" id="clock-time">--:--:--</div>
+    <div class="date" id="clock-date">---- · CST</div>
+  </div>
+</header>
+
+<main>
+  <div class="filters">
+    <span class="filter-label">FILTER:</span>
+    <button class="filter-btn active" onclick="setFilter('all',this)">ALL</button>
+    <button class="filter-btn" onclick="setFilter('running',this)">RUNNING</button>
+    <button class="filter-btn" onclick="setFilter('idle',this)">IDLE</button>
+    <button class="filter-btn" onclick="setFilter('error',this)">ERROR</button>
+    <span class="filter-count" id="filter-count">6 agents</span>
+  </div>
+  <div class="agent-grid" id="agent-grid"></div>
+</main>
+
+<div class="modal-overlay" id="modal" style="display:none" onclick="closeModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-avatar" id="m-avatar"></div>
+      <div>
+        <div class="modal-name" id="m-name"></div>
+        <div class="modal-desc" id="m-desc"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div id="m-rows"></div>
+  </div>
+</div>
+
+<script>
+// 头像存储（持久化到 localStorage）
+const avatarStore = JSON.parse(localStorage.getItem('agentAvatars') || '{}');
+
+function triggerUpload(id) {
+  document.getElementById('upload-'+id).click();
+}
+
+function handleUpload(event, id) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    avatarStore[id] = e.target.result;
+    localStorage.setItem('agentAvatars', JSON.stringify(avatarStore));
+    renderGrid();
+  };
+  reader.readAsDataURL(file);
+}
+
+const AGENTS = [
+  {
+    id:"main", name:"Ivy", emoji:"🧠", status:"running",
+    model:"claude-sonnet-4-6", color:"#00ff88",
+    currentTask:"处理飞书消息 · AI新闻摘要生成",
+    startedAt: Date.now() - 1000*60*14,
+    lastRun: null, nextRun: null,
+    totalRuns:1284, successRate:98.2,
+    channel:"feishu", description:"主助手 · 全能型",
+  },
+  {
+    id:"cron-news", name:"NewsBot", emoji:"📰", status:"idle",
+    model:"claude-sonnet-4-6", color:"#00d4ff",
+    currentTask:null,
+    lastRun: Date.now()-1000*60*60*6,
+    nextRun: Date.now()+1000*60*60*3,
+    totalRuns:42, successRate:95.2,
+    channel:"feishu", description:"每日AI新闻摘要 · 9:00 AM",
+  },
+  {
+    id:"cron-portfolio", name:"PortfolioBot", emoji:"📈", status:"idle",
+    model:"claude-sonnet-4-6", color:"#ffd700",
+    currentTask:null,
+    lastRun: Date.now()-1000*60*60*24*2,
+    nextRun: Date.now()+1000*60*60*24*5,
+    totalRuns:8, successRate:100,
+    channel:"feishu", description:"投资组合周报 · 周日 6:00 PM",
+  },
+  {
+    id:"cron-housing", name:"HouseBot", emoji:"🏠", status:"idle",
+    model:"claude-haiku-4-5", color:"#ff9944",
+    currentTask:null,
+    lastRun: Date.now()-1000*60*60*24*7,
+    nextRun: Date.now()+1000*60*60*12,
+    totalRuns:12, successRate:91.7,
+    channel:"feishu", description:"万科未来城房价监控 · 周一 9:00 AM",
+  },
+  {
+    id:"cron-learning", name:"LearnBot", emoji:"📚", status:"idle",
+    model:"claude-sonnet-4-6", color:"#b388ff",
+    currentTask:null,
+    lastRun: Date.now()-1000*60*60*3,
+    nextRun: Date.now()+1000*60*60*21,
+    totalRuns:6, successRate:100,
+    channel:"feishu", description:"AI Agent 每日学习计划 · 6:00 AM",
+  },
+  {
+    id:"subagent-1", name:"ResearchAgent", emoji:"🔍", status:"error",
+    model:"claude-sonnet-4-6", color:"#ff6b6b",
+    currentTask:"任务超时 · 技术Agent讨论",
+    lastRun: Date.now()-1000*60*30,
+    nextRun: null,
+    totalRuns:18, successRate:83.3,
+    channel:null, description:"临时子Agent · 按需启动",
+  },
+];
+
+const STATUS_CFG = {
+  running:{label:"RUNNING",color:"#00ff88",bg:"rgba(0,255,136,.1)"},
+  idle:   {label:"IDLE",   color:"#555",   bg:"rgba(136,136,136,.08)"},
+  error:  {label:"ERROR",  color:"#ff6b6b",bg:"rgba(255,107,107,.1)"},
+};
+
+let currentFilter = 'all';
+const runtimeIntervals = {};
+
+function dur(ms) {
+  const s = Math.floor(Math.abs(ms)/1000);
+  if(s<60) return s+'s';
+  const m = Math.floor(s/60);
+  if(m<60) return m+'m '+( s%60)+'s';
+  return Math.floor(m/60)+'h '+(m%60)+'m';
+}
+function rel(ts) {
+  if(!ts) return '—';
+  const d = Date.now()-ts;
+  return d<0 ? 'in '+dur(-d) : dur(d)+' ago';
+}
+function nxt(ts) {
+  if(!ts) return '—';
+  const d = ts-Date.now();
+  return d<0 ? 'overdue' : 'in '+dur(d);
+}
+function shortModel(m) {
+  return m.split('/').pop().replace('claude-','').replace('-4-5','4.5').replace('-4-6','4.6');
+}
+function successColor(r) {
+  return r>95?'#00ff88':r>80?'#ffd700':'#ff6b6b';
+}
+
+function renderCard(a) {
+  const cfg = STATUS_CFG[a.status];
+  const isRunning = a.status==='running';
+  const card = document.createElement('div');
+  card.className = 'agent-card'+(isRunning?' running':'');
+  card.style.setProperty('--agent-color', a.color);
+  if(!isRunning) card.style.borderColor = '#1a1a2e';
+
+  card.innerHTML = `
+    ${isRunning?`<div class="card-topbar" style="background:linear-gradient(90deg,transparent,${a.color},transparent)"></div>`:''}
+    <div class="card-header">
+      <div class="agent-avatar" style="background:linear-gradient(135deg,${a.color}22,${a.color}44);border:1px solid ${a.color}66" onclick="triggerUpload('${a.id}')">
+        <input type="file" accept="image/*" class="avatar-input" id="upload-${a.id}" onchange="handleUpload(event,'${a.id}')">
+        ${avatarStore[a.id] ? `<img src="${avatarStore[a.id]}" alt="${a.name}">` : `<span id="avatar-emoji-${a.id}">${a.emoji}</span>`}
+        <div class="upload-hint">📷<br>上传头像</div>
+      </div>
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="agent-name">${a.name}</span>
+          <span class="status-badge" style="color:${cfg.color};background:${cfg.bg};border:1px solid ${cfg.color}44">
+            <span class="status-dot ${a.status}" style="background:${cfg.color}"></span>
+            ${cfg.label}
+          </span>
+        </div>
+        <div class="agent-desc">${a.description}</div>
+      </div>
+    </div>
+    <div class="task-box ${isRunning?'running':''}" style="${isRunning?'border-left-color:'+a.color:''}">
+      ${a.currentTask
+        ? `<span class="task-text">${isRunning?`<span class="task-arrow" style="color:${a.color}">▶</span>`:''}${a.currentTask}${isRunning?`<span class="task-runtime" id="rt-${a.id}"></span>`:''}</span>`
+        : `<span class="task-empty">— no active task —</span>`}
+    </div>
+    <div class="card-stats">
+      <div class="mini-stat"><div class="lbl">MODEL</div><div class="val" style="color:${a.color}">${shortModel(a.model)}</div></div>
+      <div class="mini-stat"><div class="lbl">SUCCESS</div><div class="val" style="color:${successColor(a.successRate)}">${a.successRate}%</div></div>
+      <div class="mini-stat"><div class="lbl">RUNS</div><div class="val" style="color:#888">${a.totalRuns}</div></div>
+    </div>
+    <div class="card-footer">
+      <span>last: ${rel(a.lastRun)}</span>
+      ${a.nextRun?`<span>next: ${nxt(a.nextRun)}</span>`:''}
+      ${a.channel?`<span>ch: ${a.channel}</span>`:''}
+    </div>
+  `;
+
+  card.addEventListener('mouseenter', ()=>{ card.style.borderColor=a.color; card.style.background='rgba(255,255,255,.06)'; });
+  card.addEventListener('mouseleave', ()=>{ card.style.borderColor=isRunning?a.color:'#1a1a2e'; card.style.background='rgba(255,255,255,.03)'; });
+  card.addEventListener('click', ()=>openModal(a));
+
+  if(isRunning && a.startedAt) {
+    clearInterval(runtimeIntervals[a.id]);
+    runtimeIntervals[a.id] = setInterval(()=>{
+      const el = document.getElementById('rt-'+a.id);
+      if(el) el.textContent = '['+dur(Date.now()-a.startedAt)+']';
+    }, 1000);
+  }
+  return card;
+}
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderGrid();
+}
+
+function renderGrid() {
+  const grid = document.getElementById('agent-grid');
+  Object.values(runtimeIntervals).forEach(clearInterval);
+  grid.innerHTML = '';
+  const list = currentFilter==='all' ? AGENTS : AGENTS.filter(a=>a.status===currentFilter);
+  document.getElementById('filter-count').textContent = list.length+' agent'+(list.length!==1?'s':'');
+  list.forEach(a=>grid.appendChild(renderCard(a)));
+}
+
+function openModal(a) {
+  const cfg = STATUS_CFG[a.status];
+  const mAvatar = document.getElementById('m-avatar');
+  mAvatar.style.cssText = `width:80px;height:80px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:40px;background:linear-gradient(135deg,${a.color}22,${a.color}44);border:1px solid ${a.color}66;overflow:hidden;flex-shrink:0`;
+  mAvatar.innerHTML = avatarStore[a.id] ? `<img src="${avatarStore[a.id]}" style="width:100%;height:100%;object-fit:cover;border-radius:12px">` : a.emoji;
+  document.getElementById('m-name').textContent = a.name;
+  document.getElementById('m-desc').style.color = a.color;
+  document.getElementById('m-desc').textContent = a.description;
+  document.querySelector('.modal').style.borderColor = a.color;
+
+  const rows = [
+    ['ID', a.id],
+    ['STATUS', a.status.toUpperCase()],
+    ['MODEL', a.model],
+    ['CHANNEL', a.channel||'—'],
+    ['TOTAL RUNS', a.totalRuns],
+    ['SUCCESS RATE', a.successRate+'%'],
+    ['CURRENT TASK', a.currentTask||'— idle —'],
+    ['LAST RUN', rel(a.lastRun)],
+    ['NEXT RUN', nxt(a.nextRun)],
+  ];
+  document.getElementById('m-rows').innerHTML = rows.map(([k,v])=>`
+    <div class="modal-row">
+      <span class="key">${k}</span>
+      <span class="val" style="color:${k==='STATUS'?(a.status==='running'?'#00ff88':a.status==='error'?'#ff6b6b':'#555'):'#ccc'}">${v}</span>
+    </div>
+  `).join('');
+  document.getElementById('modal').style.display = 'flex';
+}
+function closeModal() { document.getElementById('modal').style.display='none'; }
+
+// 时钟
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock-time').textContent = now.toLocaleTimeString('zh-CN',{hour12:false});
+  document.getElementById('clock-date').textContent = now.toLocaleDateString('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit'})+' · CST';
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+renderGrid();
+</script>
+</body>
+</html>
