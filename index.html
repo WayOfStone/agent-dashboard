@@ -53,30 +53,30 @@
       font-size: 13px; font-weight: 700; color: #00ff88;
       letter-spacing: 2px; animation: glitch 8s infinite;
     }
-    .logo-sub { font-size: 10px; color: #333; letter-spacing: 1px; margin-top: 1px; }
+    .logo-sub { font-size: 10px; color: #888; letter-spacing: 1px; margin-top: 1px; }
 
     .header-stats { display: flex; gap: 24px; align-items: center; }
     .stat-badge { text-align: center; }
     .stat-badge .val { font-size: 16px; font-weight: 700; }
-    .stat-badge .lbl { font-size: 9px; color: #333; letter-spacing: 1px; }
+    .stat-badge .lbl { font-size: 9px; color: #888; letter-spacing: 1px; }
     .divider { width: 1px; height: 24px; background: #1a1a2e; }
 
     .clock { text-align: right; }
     .clock .time { font-size: 18px; font-weight: 700; color: #00ff88; letter-spacing: 2px; }
-    .clock .date { font-size: 10px; color: #333; margin-top: 1px; }
+    .clock .date { font-size: 10px; color: #888; margin-top: 1px; }
 
     main { padding: 24px 32px; position: relative; z-index: 1; }
 
     .filters { display: flex; gap: 8px; margin-bottom: 24px; align-items: center; }
-    .filter-label { font-size: 11px; color: #333; letter-spacing: 1px; margin-right: 4px; }
+    .filter-label { font-size: 11px; color: #888; letter-spacing: 1px; margin-right: 4px; }
     .filter-btn {
       background: transparent; border: 1px solid #1a1a2e;
-      color: #444; padding: 4px 14px; border-radius: 4px;
+      color: #999; padding: 4px 14px; border-radius: 4px;
       cursor: pointer; font-size: 11px; font-family: inherit;
       letter-spacing: 1px; transition: all .15s;
     }
     .filter-btn.active { background: rgba(0,255,136,.15); border-color: #00ff88; color: #00ff88; }
-    .filter-count { margin-left: auto; font-size: 11px; color: #333; }
+    .filter-count { margin-left: auto; font-size: 11px; color: #888; }
 
     .agent-grid {
       display: grid;
@@ -127,7 +127,7 @@
       width: 5px; height: 5px; border-radius: 50%; display: inline-block;
     }
     .status-dot.running { animation: pulse 1.2s infinite; }
-    .agent-desc { font-size: 11px; color: #555; margin-top: 2px; }
+    .agent-desc { font-size: 11px; color: #aaa; margin-top: 2px; }
 
     .task-box {
       background: rgba(0,0,0,.3); border-radius: 5px;
@@ -137,8 +137,8 @@
     }
     .task-box.running { border-left-color: var(--agent-color); }
     .task-text { color: #ccc; }
-    .task-empty { color: #333; }
-    .task-runtime { color: #555; margin-left: 8px; }
+    .task-empty { color: #888; }
+    .task-runtime { color: #aaa; margin-left: 8px; }
     .task-arrow { margin-right: 6px; }
 
     .card-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
@@ -146,12 +146,12 @@
       text-align: center; background: rgba(0,0,0,.2);
       border-radius: 4px; padding: 6px 4px;
     }
-    .mini-stat .lbl { font-size: 9px; color: #444; letter-spacing: 1px; margin-bottom: 2px; }
+    .mini-stat .lbl { font-size: 9px; color: #999; letter-spacing: 1px; margin-bottom: 2px; }
     .mini-stat .val { font-size: 12px; font-weight: 600; }
 
     .card-footer {
       margin-top: 10px; display: flex; justify-content: space-between;
-      font-size: 10px; color: #444;
+      font-size: 10px; color: #999;
     }
 
     /* Modal */
@@ -174,7 +174,7 @@
     .modal-desc { font-size: 12px; margin-top: 2px; }
     .modal-close {
       margin-left: auto; background: transparent;
-      border: 1px solid #333; color: #555;
+      border: 1px solid #333; color: #aaa;
       width: 28px; height: 28px; border-radius: 4px;
       cursor: pointer; font-size: 14px; font-family: inherit;
     }
@@ -182,7 +182,7 @@
       display: flex; justify-content: space-between;
       padding: 8px 0; border-bottom: 1px solid #111; font-size: 12px;
     }
-    .modal-row .key { color: #444; letter-spacing: 1px; }
+    .modal-row .key { color: #999; letter-spacing: 1px; }
     .modal-row .val { color: #ccc; max-width: 280px; text-align: right; }
   </style>
 </head>
